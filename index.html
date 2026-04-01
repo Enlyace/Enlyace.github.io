@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>保姆工资计算器</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <section class="hero">
+        <p class="eyebrow">工资核算小工具</p>
+        <h1>保姆工资计算器</h1>
+        <p class="subtitle">
+          按“26天工资7000元”的规则，输入结算日期和休息日期，自动算出应付工资。
+        </p>
+      </section>
+
+      <section class="card">
+        <form id="salary-form" class="form">
+          <div class="grid two-columns">
+            <label class="field">
+              <span>基准天数</span>
+              <input id="base-days" name="baseDays" type="number" min="1" value="26" required />
+            </label>
+
+            <label class="field">
+              <span>基准工资（元）</span>
+              <input
+                id="base-salary"
+                name="baseSalary"
+                type="number"
+                min="0"
+                step="0.01"
+                value="7000"
+                required
+              />
+            </label>
+          </div>
+
+          <div class="grid two-columns">
+            <label class="field">
+              <span>开始日期</span>
+              <input id="start-date" name="startDate" type="date" required />
+            </label>
+
+            <label class="field">
+              <span>结束日期</span>
+              <input id="end-date" name="endDate" type="date" required />
+            </label>
+          </div>
+
+          <label class="field">
+            <span>休息日期</span>
+            <textarea
+              id="rest-days"
+              name="restDays"
+              rows="8"
+              placeholder="支持以下写法：&#10;2026-01-10&#10;1月10日，11号，12号&#10;2026-01-20 ~ 2026-01-22"
+            ></textarea>
+            <small>
+              每行可写一个日期、一组日期或一段日期范围。支持格式：`2026-01-10`、`1月10日，11号，12号`、`2026-01-10 ~ 2026-01-12`。
+            </small>
+          </label>
+
+          <div class="actions">
+            <button type="submit" class="primary">计算工资</button>
+            <button type="button" id="fill-example" class="secondary">填入示例</button>
+            <button type="button" id="clear-form" class="ghost">清空</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card result-card">
+        <div class="result-header">
+          <h2>计算结果</h2>
+          <p id="formula-text">先输入信息，再点击“计算工资”。</p>
+        </div>
+
+        <div class="result-grid">
+          <article class="result-item">
+            <span>总天数</span>
+            <strong id="total-days">0</strong>
+          </article>
+          <article class="result-item">
+            <span>休息天数</span>
+            <strong id="rest-count">0</strong>
+          </article>
+          <article class="result-item">
+            <span>工作天数</span>
+            <strong id="work-days">0</strong>
+          </article>
+          <article class="result-item emphasis">
+            <span>应付工资</span>
+            <strong id="payable-salary">¥0.00</strong>
+          </article>
+        </div>
+
+        <div class="details">
+          <div>
+            <h3>日工资</h3>
+            <p id="daily-salary">¥0.00</p>
+          </div>
+          <div>
+            <h3>休息明细</h3>
+            <p id="rest-list">暂无</p>
+          </div>
+        </div>
+
+        <p id="error-message" class="error" hidden></p>
+      </section>
+    </main>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
