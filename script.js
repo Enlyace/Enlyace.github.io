@@ -26,6 +26,7 @@ const formulaTextOutput = document.querySelector("#formula-text");
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const HISTORY_STORAGE_KEY = "nanny-salary-history-v1";
 const INSTALL_DISMISSED_KEY = "nanny-salary-install-dismissed";
+const INSTALL_COMPLETED_KEY = "nanny-salary-install-completed";
 
 let deferredInstallPrompt = null;
 
@@ -287,26 +288,32 @@ function deleteHistoryRecord(recordId) {
 
 function setupInstallExperience() {
   const dismissed = localStorage.getItem(INSTALL_DISMISSED_KEY) === "1";
+  const installCompleted = localStorage.getItem(INSTALL_COMPLETED_KEY) === "1";
   const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
   const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
   const isSafari = /^((?!chrome|android).)*safari/i.test(window.navigator.userAgent);
 
   if (isStandalone) {
+    localStorage.setItem(INSTALL_COMPLETED_KEY, "1");
     installCard.hidden = true;
     return;
   }
 
-  if (dismissed) {
+  if (installCompleted || dismissed) {
     installCard.hidden = true;
   }
 
   if (isIos && isSafari) {
-    installText.textContent = "iPhone 上请用 Safari 打开，然后点“分享”按钮，选择“添加到主屏幕”。";
+    installText.textContent = "iPhone 上请用 Safari 打开，然后点“共享”按钮，选择“添加到主屏幕”。";
   } else {
     installText.textContent = "安卓浏览器可直接安装到桌面；如果没看到安装按钮，也可以在浏览器菜单里找“安装应用”或“添加到主屏幕”。";
   }
 
   window.addEventListener("beforeinstallprompt", (event) => {
+    if (localStorage.getItem(INSTALL_COMPLETED_KEY) === "1") {
+      return;
+    }
+
     event.preventDefault();
     deferredInstallPrompt = event;
     installButton.hidden = false;
@@ -316,8 +323,9 @@ function setupInstallExperience() {
 
   window.addEventListener("appinstalled", () => {
     deferredInstallPrompt = null;
+    localStorage.setItem(INSTALL_COMPLETED_KEY, "1");
     installButton.hidden = true;
-    installText.textContent = "已经安装到桌面了，以后可以像普通 App 一样直接打开。";
+    installCard.hidden = true;
   });
 }
 
