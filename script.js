@@ -7,10 +7,6 @@ const restDaysInput = document.querySelector("#rest-days");
 const fillExampleButton = document.querySelector("#fill-example");
 const clearFormButton = document.querySelector("#clear-form");
 const errorMessage = document.querySelector("#error-message");
-const installCard = document.querySelector("#install-card");
-const installButton = document.querySelector("#install-app");
-const dismissInstallButton = document.querySelector("#dismiss-install");
-const installText = document.querySelector("#install-text");
 const clearHistoryButton = document.querySelector("#clear-history");
 const historyList = document.querySelector("#history-list");
 const historySummary = document.querySelector("#history-summary");
@@ -25,14 +21,9 @@ const formulaTextOutput = document.querySelector("#formula-text");
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const HISTORY_STORAGE_KEY = "nanny-salary-history-v1";
-const INSTALL_DISMISSED_KEY = "nanny-salary-install-dismissed";
-const INSTALL_COMPLETED_KEY = "nanny-salary-install-completed";
-
-let deferredInstallPrompt = null;
 
 setDefaultDates();
 renderHistory();
-setupInstallExperience();
 registerServiceWorker();
 
 form.addEventListener("submit", (event) => {
@@ -81,22 +72,6 @@ historyList.addEventListener("click", (event) => {
   if (action === "delete") {
     deleteHistoryRecord(recordId);
   }
-});
-
-installButton.addEventListener("click", async () => {
-  if (!deferredInstallPrompt) {
-    return;
-  }
-
-  deferredInstallPrompt.prompt();
-  await deferredInstallPrompt.userChoice;
-  deferredInstallPrompt = null;
-  installButton.hidden = true;
-});
-
-dismissInstallButton.addEventListener("click", () => {
-  installCard.hidden = true;
-  localStorage.setItem(INSTALL_DISMISSED_KEY, "1");
 });
 
 function setDefaultDates() {
@@ -284,49 +259,6 @@ function deleteHistoryRecord(recordId) {
   const next = readHistory().filter((item) => item.id !== recordId);
   localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(next));
   renderHistory();
-}
-
-function setupInstallExperience() {
-  const dismissed = localStorage.getItem(INSTALL_DISMISSED_KEY) === "1";
-  const installCompleted = localStorage.getItem(INSTALL_COMPLETED_KEY) === "1";
-  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
-  const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
-  const isSafari = /^((?!chrome|android).)*safari/i.test(window.navigator.userAgent);
-
-  if (isStandalone) {
-    localStorage.setItem(INSTALL_COMPLETED_KEY, "1");
-    installCard.hidden = true;
-    return;
-  }
-
-  if (installCompleted || dismissed) {
-    installCard.hidden = true;
-  }
-
-  if (isIos && isSafari) {
-    installText.textContent = "iPhone 上请用 Safari 打开，然后点“共享”按钮，选择“添加到主屏幕”。";
-  } else {
-    installText.textContent = "安卓浏览器可直接安装到桌面；如果没看到安装按钮，也可以在浏览器菜单里找“安装应用”或“添加到主屏幕”。";
-  }
-
-  window.addEventListener("beforeinstallprompt", (event) => {
-    if (localStorage.getItem(INSTALL_COMPLETED_KEY) === "1") {
-      return;
-    }
-
-    event.preventDefault();
-    deferredInstallPrompt = event;
-    installButton.hidden = false;
-    installCard.hidden = false;
-    localStorage.removeItem(INSTALL_DISMISSED_KEY);
-  });
-
-  window.addEventListener("appinstalled", () => {
-    deferredInstallPrompt = null;
-    localStorage.setItem(INSTALL_COMPLETED_KEY, "1");
-    installButton.hidden = true;
-    installCard.hidden = true;
-  });
 }
 
 function registerServiceWorker() {

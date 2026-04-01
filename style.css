@@ -77,7 +77,6 @@ h1 {
   margin-top: 18px;
 }
 
-.install-card,
 .history-header {
   display: flex;
   align-items: center;
@@ -85,25 +84,13 @@ h1 {
   gap: 20px;
 }
 
-.install-copy,
-.install-actions {
-  display: grid;
-  gap: 10px;
-}
-
-.install-copy h2,
 .history-header h2 {
   font-size: clamp(1.4rem, 3vw, 2rem);
 }
 
-.install-copy p,
 .history-header p {
   color: var(--muted);
   line-height: 1.7;
-}
-
-.install-actions {
-  justify-items: end;
 }
 
 .form {
@@ -123,6 +110,7 @@ h1 {
 .field {
   display: grid;
   gap: 8px;
+  min-width: 0;
 }
 
 .field span {
@@ -143,6 +131,8 @@ button {
 input,
 textarea {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   border: 1px solid rgba(112, 82, 58, 0.16);
   border-radius: 16px;
   padding: 14px 16px;
@@ -152,6 +142,10 @@ textarea {
     border-color 0.2s ease,
     box-shadow 0.2s ease,
     transform 0.2s ease;
+}
+
+input[type="date"] {
+  min-width: 0;
 }
 
 input:focus,
@@ -365,7 +359,6 @@ button:hover {
     grid-template-columns: 1fr;
   }
 
-  .install-card,
   .history-header,
   .history-top,
   .history-meta,
@@ -374,12 +367,6 @@ button:hover {
     flex-direction: column;
   }
 
-  .install-actions {
-    justify-items: stretch;
-    width: 100%;
-  }
-
-  .install-actions button,
   .history-actions button,
   .history-header button {
     width: 100%;
