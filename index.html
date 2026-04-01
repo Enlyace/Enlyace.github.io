@@ -4,6 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>保姆工资计算器</title>
+    <meta name="theme-color" content="#bc5f2c" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="工资计算器" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
@@ -14,6 +22,20 @@
         <p class="subtitle">
           按“26天工资7000元”的规则，输入结算日期和休息日期，自动算出应付工资。
         </p>
+      </section>
+
+      <section class="card install-card" id="install-card">
+        <div class="install-copy">
+          <p class="eyebrow">手机使用更方便</p>
+          <h2>支持加到桌面</h2>
+          <p id="install-text">
+            安卓浏览器可直接安装到桌面；iPhone 可在 Safari 里点“分享”后选择“添加到主屏幕”。
+          </p>
+        </div>
+        <div class="install-actions">
+          <button type="button" id="install-app" class="primary" hidden>安装到手机桌面</button>
+          <button type="button" id="dismiss-install" class="ghost">先知道了</button>
+        </div>
       </section>
 
       <section class="card">
@@ -108,6 +130,18 @@
         </div>
 
         <p id="error-message" class="error" hidden></p>
+      </section>
+
+      <section class="card history-card">
+        <div class="history-header">
+          <div>
+            <p class="eyebrow">自动保存</p>
+            <h2>历史记录</h2>
+            <p id="history-summary">每次计算后会自动保存在当前手机或电脑浏览器里。</p>
+          </div>
+          <button type="button" id="clear-history" class="ghost">清空全部记录</button>
+        </div>
+        <div id="history-list" class="history-list"></div>
       </section>
     </main>
 

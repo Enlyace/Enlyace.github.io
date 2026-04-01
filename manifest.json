@@ -1,0 +1,24 @@
+{
+  "name": "保姆工资计算器",
+  "short_name": "工资计算器",
+  "description": "按日期计算保姆应付工资，支持记录休息天数并保存历史记录。",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fff7ef",
+  "theme_color": "#bc5f2c",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

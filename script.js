@@ -7,6 +7,13 @@ const restDaysInput = document.querySelector("#rest-days");
 const fillExampleButton = document.querySelector("#fill-example");
 const clearFormButton = document.querySelector("#clear-form");
 const errorMessage = document.querySelector("#error-message");
+const installCard = document.querySelector("#install-card");
+const installButton = document.querySelector("#install-app");
+const dismissInstallButton = document.querySelector("#dismiss-install");
+const installText = document.querySelector("#install-text");
+const clearHistoryButton = document.querySelector("#clear-history");
+const historyList = document.querySelector("#history-list");
+const historySummary = document.querySelector("#history-summary");
 
 const totalDaysOutput = document.querySelector("#total-days");
 const restCountOutput = document.querySelector("#rest-count");
@@ -17,8 +24,15 @@ const restListOutput = document.querySelector("#rest-list");
 const formulaTextOutput = document.querySelector("#formula-text");
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
+const HISTORY_STORAGE_KEY = "nanny-salary-history-v1";
+const INSTALL_DISMISSED_KEY = "nanny-salary-install-dismissed";
+
+let deferredInstallPrompt = null;
 
 setDefaultDates();
+renderHistory();
+setupInstallExperience();
+registerServiceWorker();
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -38,6 +52,50 @@ clearFormButton.addEventListener("click", () => {
   form.reset();
   setDefaultDates();
   renderEmptyState();
+});
+
+clearHistoryButton.addEventListener("click", () => {
+  localStorage.removeItem(HISTORY_STORAGE_KEY);
+  renderHistory();
+});
+
+historyList.addEventListener("click", (event) => {
+  const target = event.target;
+
+  if (!(target instanceof HTMLElement)) {
+    return;
+  }
+
+  const action = target.dataset.action;
+  const recordId = target.dataset.recordId;
+
+  if (!action || !recordId) {
+    return;
+  }
+
+  if (action === "restore") {
+    restoreHistoryRecord(recordId);
+  }
+
+  if (action === "delete") {
+    deleteHistoryRecord(recordId);
+  }
+});
+
+installButton.addEventListener("click", async () => {
+  if (!deferredInstallPrompt) {
+    return;
+  }
+
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  installButton.hidden = true;
+});
+
+dismissInstallButton.addEventListener("click", () => {
+  installCard.hidden = true;
+  localStorage.setItem(INSTALL_DISMISSED_KEY, "1");
 });
 
 function setDefaultDates() {
@@ -85,21 +143,194 @@ function calculateSalary() {
     const payableSalary = workDays * dailySalary;
 
     errorMessage.hidden = true;
-    totalDaysOutput.textContent = String(totalDays);
-    restCountOutput.textContent = String(restDates.length);
-    workDaysOutput.textContent = String(workDays);
-    payableSalaryOutput.textContent = formatCurrency(payableSalary);
-    dailySalaryOutput.textContent = `${formatCurrency(dailySalary)} / 天`;
-    restListOutput.textContent = restDates.length
-      ? restDates.map(formatDisplayDate).join("、")
-      : "没有填写休息日期";
-    formulaTextOutput.textContent =
-      `${formatDisplayDate(periodStart)} 到 ${formatDisplayDate(periodEnd)} 共 ${totalDays} 天，` +
-      `休息 ${restDates.length} 天，工作 ${workDays} 天，应付工资 = ${workDays} × ${formatCurrency(dailySalary)} = ${formatCurrency(payableSalary)}`;
+    renderResult({
+      totalDays,
+      restDates,
+      workDays,
+      dailySalary,
+      payableSalary,
+      periodStart,
+      periodEnd,
+    });
+    saveHistoryRecord({
+      id: String(Date.now()),
+      savedAt: new Date().toISOString(),
+      baseDays,
+      baseSalary,
+      startDate: startDateInput.value,
+      endDate: endDateInput.value,
+      restInput: restDaysInput.value.trim(),
+      totalDays,
+      restDays: restDates.length,
+      workDays,
+      dailySalary,
+      payableSalary,
+    });
   } catch (error) {
     errorMessage.hidden = false;
     errorMessage.textContent = error instanceof Error ? error.message : "计算失败，请检查输入内容。";
   }
+}
+
+function renderResult(result) {
+  const { totalDays, restDates, workDays, dailySalary, payableSalary, periodStart, periodEnd } = result;
+  totalDaysOutput.textContent = String(totalDays);
+  restCountOutput.textContent = String(restDates.length);
+  workDaysOutput.textContent = String(workDays);
+  payableSalaryOutput.textContent = formatCurrency(payableSalary);
+  dailySalaryOutput.textContent = `${formatCurrency(dailySalary)} / 天`;
+  restListOutput.textContent = restDates.length
+    ? restDates.map(formatDisplayDate).join("、")
+    : "没有填写休息日期";
+  formulaTextOutput.textContent =
+    `${formatDisplayDate(periodStart)} 到 ${formatDisplayDate(periodEnd)} 共 ${totalDays} 天，` +
+    `休息 ${restDates.length} 天，工作 ${workDays} 天，应付工资 = ${workDays} × ${formatCurrency(dailySalary)} = ${formatCurrency(payableSalary)}`;
+}
+
+function readHistory() {
+  try {
+    const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+    if (!raw) {
+      return [];
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistoryRecord(record) {
+  const existing = readHistory();
+  const dedupeKey = `${record.startDate}|${record.endDate}|${record.restInput}|${record.baseDays}|${record.baseSalary}|${record.payableSalary}`;
+  const previous = existing[0];
+
+  if (previous) {
+    const previousKey = `${previous.startDate}|${previous.endDate}|${previous.restInput}|${previous.baseDays}|${previous.baseSalary}|${previous.payableSalary}`;
+    if (previousKey === dedupeKey) {
+      return;
+    }
+  }
+
+  const next = [record, ...existing].slice(0, 30);
+  localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(next));
+  renderHistory();
+}
+
+function renderHistory() {
+  const history = readHistory();
+  historySummary.textContent = history.length
+    ? `已保存 ${history.length} 条记录，只保存在当前浏览器里。`
+    : "每次计算后会自动保存在当前手机或电脑浏览器里。";
+  clearHistoryButton.hidden = history.length === 0;
+
+  if (!history.length) {
+    historyList.innerHTML = `
+      <article class="history-empty">
+        还没有保存记录。你计算过一次工资后，这里会自动出现最近的结果。
+      </article>
+    `;
+    return;
+  }
+
+  historyList.innerHTML = history
+    .map((record) => {
+      const savedAt = new Date(record.savedAt);
+      const restPreview = record.restInput
+        ? escapeHtml(record.restInput).replace(/\n/g, "，")
+        : "没有填写休息日期";
+
+      return `
+        <article class="history-item">
+          <div class="history-top">
+            <div class="history-main">
+              <h3>${escapeHtml(record.startDate)} 到 ${escapeHtml(record.endDate)}</h3>
+              <p>${restPreview}</p>
+            </div>
+            <div class="history-pay">${formatCurrency(record.payableSalary)}</div>
+          </div>
+          <div class="history-meta">
+            <span>总天数 ${record.totalDays} 天</span>
+            <span>休息 ${record.restDays} 天</span>
+            <span>工作 ${record.workDays} 天</span>
+            <span>保存于 ${formatDateTime(savedAt)}</span>
+          </div>
+          <div class="history-actions">
+            <button type="button" class="secondary" data-action="restore" data-record-id="${record.id}">回填重算</button>
+            <button type="button" class="ghost" data-action="delete" data-record-id="${record.id}">删除</button>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function restoreHistoryRecord(recordId) {
+  const record = readHistory().find((item) => item.id === recordId);
+  if (!record) {
+    return;
+  }
+
+  baseDaysInput.value = String(record.baseDays);
+  baseSalaryInput.value = String(record.baseSalary);
+  startDateInput.value = record.startDate;
+  endDateInput.value = record.endDate;
+  restDaysInput.value = record.restInput;
+  calculateSalary();
+}
+
+function deleteHistoryRecord(recordId) {
+  const next = readHistory().filter((item) => item.id !== recordId);
+  localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(next));
+  renderHistory();
+}
+
+function setupInstallExperience() {
+  const dismissed = localStorage.getItem(INSTALL_DISMISSED_KEY) === "1";
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+  const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+  const isSafari = /^((?!chrome|android).)*safari/i.test(window.navigator.userAgent);
+
+  if (isStandalone) {
+    installCard.hidden = true;
+    return;
+  }
+
+  if (dismissed) {
+    installCard.hidden = true;
+  }
+
+  if (isIos && isSafari) {
+    installText.textContent = "iPhone 上请用 Safari 打开，然后点“分享”按钮，选择“添加到主屏幕”。";
+  } else {
+    installText.textContent = "安卓浏览器可直接安装到桌面；如果没看到安装按钮，也可以在浏览器菜单里找“安装应用”或“添加到主屏幕”。";
+  }
+
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    installButton.hidden = false;
+    installCard.hidden = false;
+    localStorage.removeItem(INSTALL_DISMISSED_KEY);
+  });
+
+  window.addEventListener("appinstalled", () => {
+    deferredInstallPrompt = null;
+    installButton.hidden = true;
+    installText.textContent = "已经安装到桌面了，以后可以像普通 App 一样直接打开。";
+  });
+}
+
+function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) {
+    return;
+  }
+
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => {
+      // Ignore registration failures so the calculator still works normally.
+    });
+  });
 }
 
 function parseRestDates(rawValue, periodStart, periodEnd) {
@@ -278,4 +509,23 @@ function formatCurrency(value) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(value);
+}
+
+function formatDateTime(date) {
+  return new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function escapeHtml(value) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll("\"", "&quot;")
+    .replaceAll("'", "&#39;");
 }
